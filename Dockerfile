@@ -1,15 +1,19 @@
 FROM php:5.6-apache
 
-RUN touch /usr/local/etc/php/conf.d/upload-limit.ini \
-	&& echo "upload_max_filesize = 32M" >> /usr/local/etc/php/conf.d/upload-limit.ini \
-	&& echo "post_max_filesize = 32M" >> /usr/local/etc/php/conf.d/upload-limit.ini
+RUN touch /usr/local/etc/php/conf.d/upload-limit.ini && echo "upload_max_filesize = 32M" >> /usr/local/etc/php/conf.d/upload-limit.ini && echo "post_max_size = 32M" >> /usr/local/etc/php/conf.d/upload-limit.ini
 
 RUN a2enmod rewrite expires headers
 
 # install the PHP extensions we need
-RUN apt-get update && apt-get install -y unzip libpng12-dev libjpeg-dev && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y libpng12-dev libjpeg-dev && rm -rf /var/lib/apt/lists/* \
 	&& docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr \
 	&& docker-php-ext-install gd mysqli opcache
+
+# WIN fix
+RUN apt-get update && apt-get install -y dos2unix
+
+# OTHER fix
+RUN apt-get update && apt-get install -y unzip rsync && rm -r /var/lib/apt/lists/*
 
 # set recommended PHP.ini settings
 # see https://secure.php.net/manual/en/opcache.installation.php
@@ -35,6 +39,10 @@ RUN curl -o wordpress.tar.gz -SL https://wordpress.org/wordpress-${WORDPRESS_VER
 	&& chown -R www-data:www-data /usr/src/wordpress
 
 COPY docker-entrypoint.sh /entrypoint.sh
+
+# WIN fix
+RUN dos2unix /entrypoint.sh
+RUN apt-get --purge remove -y dos2unix && rm -rf /var/lib/apt/lists/*
 
 # grr, ENTRYPOINT resets CMD now
 ENTRYPOINT ["/entrypoint.sh"]
